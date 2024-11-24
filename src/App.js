@@ -77,6 +77,12 @@ const App = () => {
     const idHorario = `${dia}-${horario}`;
     const gruposReservados = reservas[idHorario] || [];
 
+    // Verificar si el grupo ya reservó este horario
+    if (gruposReservados.includes(grupoSeleccionado)) {
+      alert(`El grupo ${grupoSeleccionado} ya ha reservado este horario.`);
+      return;
+    }
+
     if (gruposReservados.length >= 4) {
       alert(
         `El horario ya fue reservado por 4 grupos: ${gruposReservados.join(", ")}.`
@@ -84,6 +90,7 @@ const App = () => {
       return;
     }
 
+    // Actualizar reservas
     const nuevasReservas = {
       ...reservas,
       [idHorario]: [...gruposReservados, grupoSeleccionado],
