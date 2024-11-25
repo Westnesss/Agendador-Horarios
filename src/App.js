@@ -8,7 +8,8 @@ const App = () => {
     "Jueves",
     "Viernes",
   ]);
-  const horariosPorDia = {
+
+   const horariosPorDia = {
     Lunes: [
       "07:00 - 08:00",
       "08:00 - 09:00",
@@ -65,8 +66,47 @@ const App = () => {
   const [reservas, setReservas] = useState(
     JSON.parse(localStorage.getItem("reservas")) || {}
   );
-
   const [grupoSeleccionado, setGrupoSeleccionado] = useState("");
+  const [passwords, setPasswords] = useState(
+    JSON.parse(localStorage.getItem("passwords")) || {}
+  );
+  const [grupoAutenticado, setGrupoAutenticado] = useState(false);
+
+  const ADMIN_PASSWORD = "admin123";
+
+  const handleSeleccionarGrupo = (grupo) => {
+    if (grupo === "") {
+      setGrupoSeleccionado("");
+      setGrupoAutenticado(false);
+      return;
+    }
+
+    if (!passwords[grupo]) {
+      const nuevaContraseña = prompt(
+        `Establece una contraseña para el grupo ${grupo}:`
+      );
+      if (nuevaContraseña) {
+        const nuevasPasswords = { ...passwords, [grupo]: nuevaContraseña };
+        setPasswords(nuevasPasswords);
+        localStorage.setItem("passwords", JSON.stringify(nuevasPasswords));
+        setGrupoSeleccionado(grupo);
+        alert("Contraseña establecida con éxito.");
+      } else {
+        alert("No se estableció ninguna contraseña.");
+      }
+    } else {
+      const contraseñaIngresada = prompt(
+        `Ingresa la contraseña para el grupo ${grupo}:`
+      );
+      if (contraseñaIngresada === passwords[grupo]) {
+        setGrupoSeleccionado(grupo);
+        setGrupoAutenticado(true);
+        alert(`Grupo ${grupo} autenticado correctamente.`);
+      } else {
+        alert("Contraseña incorrecta. No puedes seleccionar este grupo.");
+      }
+    }
+  };
 
   const handleSeleccionarHorario = (dia, horario) => {
     if (!grupoSeleccionado) {
@@ -74,10 +114,21 @@ const App = () => {
       return;
     }
 
+    if (!grupoAutenticado) {
+      const contraseñaIngresada = prompt(
+        `Ingresa la contraseña para el grupo ${grupoSeleccionado}:`
+      );
+      if (contraseñaIngresada !== passwords[grupoSeleccionado]) {
+        alert("Contraseña incorrecta. No puedes realizar la reserva.");
+        return;
+      }
+      setGrupoAutenticado(true);
+      alert("Autenticación exitosa. Puedes continuar reservando horarios.");
+    }
+
     const idHorario = `${dia}-${horario}`;
     const gruposReservados = reservas[idHorario] || [];
 
-    // Verificar si el grupo ya reservó este horario
     if (gruposReservados.includes(grupoSeleccionado)) {
       alert(`El grupo ${grupoSeleccionado} ya ha reservado este horario.`);
       return;
@@ -90,7 +141,6 @@ const App = () => {
       return;
     }
 
-    // Actualizar reservas
     const nuevasReservas = {
       ...reservas,
       [idHorario]: [...gruposReservados, grupoSeleccionado],
@@ -101,28 +151,24 @@ const App = () => {
   };
 
   const handleFinalizarSeleccion = () => {
-    const horariosReservados = Object.values(reservas).filter((grupos) =>
-      grupos.includes(grupoSeleccionado)
-    );
-
-    if (horariosReservados.length === 0) {
-      alert("No se ha seleccionado ningún horario.");
-    } else {
-      alert(`Selección finalizada para el grupo: ${grupoSeleccionado}`);
-    }
-
+    alert(`Selección finalizada para el grupo: ${grupoSeleccionado}`);
     setGrupoSeleccionado("");
+    setGrupoAutenticado(false);
   };
 
   const handleBorrarReservas = () => {
-    if (
-      window.confirm(
-        "¿Estás seguro de que deseas borrar todas las reservas? Esta acción no se puede deshacer."
-      )
-    ) {
+    const contraseñaAdmin = prompt("Ingresa la contraseña de administrador:");
+    if (contraseñaAdmin !== ADMIN_PASSWORD) {
+      alert("Contraseña incorrecta. No se pueden borrar las reservas.");
+      return;
+    }
+
+    if (window.confirm("¿Estás seguro de que deseas borrar todas las reservas?")) {
       setReservas({});
+      setPasswords({});
       localStorage.removeItem("reservas");
-      alert("Todas las reservas han sido borradas.");
+      localStorage.removeItem("passwords");
+      alert("Todas las reservas y contraseñas han sido borradas.");
     }
   };
 
@@ -130,8 +176,8 @@ const App = () => {
     <div className="app-container">
       <h1>Asignación de Horarios</h1>
       <p>
-        Selecciona un grupo y luego elige los horarios disponibles. Haz clic en
-        "Finalizar selección" cuando termines.
+        Selecciona un grupo, establece su contraseña y elige los horarios
+        disponibles. Haz clic en "Finalizar selección" cuando termines.
       </p>
 
       {/* Selección del grupo */}
@@ -140,7 +186,7 @@ const App = () => {
           Selecciona tu grupo:
           <select
             value={grupoSeleccionado}
-            onChange={(e) => setGrupoSeleccionado(e.target.value)}
+            onChange={(e) => handleSeleccionarGrupo(e.target.value)}
             disabled={grupoSeleccionado !== ""}
           >
             <option value="">-- Selecciona un Grupo --</option>
